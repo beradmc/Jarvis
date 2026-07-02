@@ -116,28 +116,6 @@ namespace JarvisCSharp.AI
 
                 Logger.Information("Connecting to Gemini Live API...");
                 Logger.Information($"Model: models/gemini-2.5-flash-native-audio-latest, Voice: {voiceName}");
-                
-                // Add explicit API key validation for detailed debugging
-                try
-                {
-                    using var http = new System.Net.Http.HttpClient();
-                    var validateResp = await http.GetAsync($"https://generativelanguage.googleapis.com/v1alpha/models?key={_apiKey}");
-                    if (!validateResp.IsSuccessStatusCode)
-                    {
-                        string errBody = await validateResp.Content.ReadAsStringAsync();
-                        Logger.Error(null!, $"[DEBUG] API Key Validation Failed! Status: {validateResp.StatusCode}");
-                        Logger.Error(null!, $"[DEBUG] Error Details: {errBody}");
-                        // Continue anyway, but now we have the detailed error in logs
-                    }
-                    else
-                    {
-                        Logger.Information("[DEBUG] API Key is valid.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"[DEBUG] Could not validate API key via HTTP: {ex.Message}");
-                }
 
                 _liveSession = await _client.Live.ConnectAsync("models/gemini-2.5-flash-native-audio-latest", config);
                 
@@ -173,10 +151,24 @@ namespace JarvisCSharp.AI
             try
             {
                 Logger.Information("Closing Gemini Live API session...");
-                
-                // Dispose the session (closes connection)
+
+                // Dispose the underlying connection if the SDK exposes IDisposable/IAsyncDisposable,
+                // instead of just dropping the reference and leaking the WebSocket.
+                var sessionToClose = _liveSession;
                 _liveSession = null;
                 _isSessionOpen = false;
+
+                try
+                {
+                    if (sessionToClose is IAsyncDisposable asyncDisposable)
+                        await asyncDisposable.DisposeAsync();
+                    else if (sessionToClose is IDisposable disposable)
+                        disposable.Dispose();
+                }
+                catch (Exception disposeEx)
+                {
+                    Logger.Warning($"Error disposing Live session: {disposeEx.Message}");
+                }
                 
                 Logger.Information("Gemini Live API session closed.");
                 

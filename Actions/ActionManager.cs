@@ -143,8 +143,36 @@ namespace JarvisCSharp.Actions
         /// </summary>
         private string? AssessConfirmationNeed(string toolName, Dictionary<string, JsonElement> args)
         {
-            // Kullanıcının isteği üzerine onay sistemi tamamen devre dışı bırakıldı.
-            return null;
+            // Args JSON'ı zaten önceden onaylanmış bir çağrı ise (ExecuteConfirmedToolAsync
+            // "_confirmed_by_user" bayrağını ekliyor) tekrar sormuyoruz.
+            if (args.TryGetValue("_confirmed_by_user", out var confirmed) &&
+                confirmed.ValueKind == JsonValueKind.True)
+            {
+                return null;
+            }
+
+            switch (toolName)
+            {
+                // Rastgele PowerShell/CMD komutu çalıştırmak en yüksek riskli işlem:
+                // dosya silme, ağ isteği, sistem ayarı değiştirme vb. her şeyi yapabilir.
+                case "shell_run":
+                    return $"Sistemde şu komutu çalıştırmak üzeresin: \"{S(args, "command")}\". Onaylıyor musun?";
+
+                // Kullanıcının gerçek bir kişiye/gruba mesaj göndermesi geri alınamaz.
+                case "send_whatsapp_message":
+                    if (B(args, "send_now", false))
+                        return $"\"{S(args, "recipient_name", S(args, "phone_number"))}\" kişisine WhatsApp mesajı gönderilecek. Onaylıyor musun?";
+                    return null;
+
+                // Kalıcı veri silme işlemleri geri alınamaz.
+                case "delete_memory":
+                    return "Bir hafıza kaydı silinecek. Onaylıyor musun?";
+                case "delete_calendar_event":
+                    return $"\"{S(args, "title")}\" takvim etkinliği silinecek. Onaylıyor musun?";
+
+                default:
+                    return null;
+            }
         }
 
         // ── Yardımcı ──────────────────────────────────────────────────────────
