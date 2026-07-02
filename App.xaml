@@ -1,0 +1,23 @@
+<Application x:Class="JarvisCSharp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:JarvisCSharp">
+    <Application.Resources>
+        <!-- Renk Paleti -->
+        <SolidColorBrush x:Key="BgBrush" Color="#050814"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#6366f1"/>
+        <SolidColorBrush x:Key="OrangeBrush" Color="#f97316"/>
+        <SolidColorBrush x:Key="Orange2Brush" Color="#fb923c"/>
+        <SolidColorBrush x:Key="MidBrush" Color="#312e81"/>
+        <SolidColorBrush x:Key="DimBrush" Color="#1e1b4b"/>
+        <SolidColorBrush x:Key="DimmerBrush" Color="#0a0c16"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#e0e7ff"/>
+        <SolidColorBrush x:Key="PanelBrush" Color="#0b0f19"/>
+        <SolidColorBrush x:Key="GreenBrush" Color="#10b981"/>
+        <SolidColorBrush x:Key="CyanBrush" Color="#06b6d4"/>
+        <SolidColorBrush x:Key="RedBrush" Color="#ef4444"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#ec4899"/>
+        <SolidColorBrush x:Key="BlueBrush" Color="#3b82f6"/>
+        <SolidColorBrush x:Key="GoldBrush" Color="#eab308"/>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,435 @@
+/* ═══════════════════════════════════════════════════════════════
+   Jarvis — Glass sphere orb + Siri-style conversation
+   Monochrome layered palette — no true black, tonal depth
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Monochrome layered palette — no true black, tonal depth */
+  --bg-deep:          #0E0E11;
+  --bg:               #151518;
+  --bg-mid:           #1C1C20;
+  --bg-elevated:      #232328;
+  --bg-elevated-2:    #2C2C33;
+  --bg-surface:       #34343C;
+  --text:             #F5F5F7;
+  --text-secondary:   #A0A0A8;
+  --text-tertiary:    #6A6A72;
+  --border:           rgba(255, 255, 255, 0.07);
+  --border-strong:    rgba(255, 255, 255, 0.12);
+  --ease:             cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font:             -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPACT MODE — floating spectral orb (80x80)
+   ═══════════════════════════════════════════════════════════════ */
+
+#orb-compact {
+  width: 80px; height: 80px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab; position: relative;
+}
+#orb-compact:active { cursor: grabbing; }
+#orb-compact.hidden { display: none; }
+
+#orb-stage {
+  position: relative; width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  transform: scale(0); opacity: 0;
+  transition: transform 0.5s var(--ease-snap), opacity 0.3s var(--ease-out);
+}
+#orb-compact.summoned #orb-stage { transform: scale(1); opacity: 1; }
+#orb-compact.dismissing #orb-stage {
+  transform: scale(0); opacity: 0;
+  transition: transform 0.3s var(--ease), opacity 0.25s var(--ease);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPACT ORB — Glass sphere with caustic refraction
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Layer 0: soft outer bloom */
+#orb-bloom {
+  position: absolute; inset: -40px; border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 100, 100, 0.015) 50deg,
+    rgba(255, 200, 80, 0.025) 90deg,
+    rgba(80, 220, 255, 0.025) 130deg,
+    rgba(160, 120, 255, 0.015) 170deg,
+    transparent 210deg,
+    transparent 360deg
+  );
+  filter: blur(20px);
+  animation: sweep-arc 12s linear infinite;
+  pointer-events: none;
+}
+@keyframes sweep-arc {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Layer 1: subtle outer ring */
+#orb-outer-ring {
+  position: absolute; inset: -3px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+  animation: ring-breathe 5s var(--ease) infinite;
+}
+@keyframes ring-breathe {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.5; }
+}
+
+/* Layer 2: bright caustic rim — light concentrating at sphere edge */
+#orb-rim {
+  position: absolute;
+  width: 62px; height: 62px; border-radius: 50%;
+  background: radial-gradient(circle,
+    transparent 0%,
+    transparent 72%,
+    rgba(255, 255, 255, 0.04) 80%,
+    rgba(180, 200, 255, 0.06) 86%,
+    rgba(160, 180, 255, 0.03) 92%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: rim-shift 4s var(--ease) infinite;
+}
+@keyframes rim-shift {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  33% { filter: hue-rotate(40deg) brightness(1.15); }
+  66% { filter: hue-rotate(-30deg) brightness(1.05); }
+}
+
+/* Layer 3: dark glass sphere body — volumetric depth */
+#orb-core {
+  width: 58px; height: 58px; border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  background:
+    /* Surface reflection on top-left */
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.10) 0%, transparent 30%),
+    /* Edge light (glass catching light at rim) */
+    radial-gradient(circle at 70% 80%, rgba(140, 150, 180, 0.06) 0%, transparent 25%),
+    /* Deep grey body — tonal depth, not black */
+    radial-gradient(circle at 50% 55%, rgba(40, 40, 48, 0.4) 0%, rgba(22, 22, 28, 0.95) 55%, rgba(16, 16, 20, 1) 100%);
+  box-shadow:
+    0 0 20px rgba(100, 100, 120, 0.08),
+    inset 0 0 18px rgba(10, 10, 14, 0.6);
+}
+
+/* Internal spectral caustic — refracted light sweeping inside sphere */
+#orb-caustic {
+  position: absolute;
+  inset: -25%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 190deg,
+    transparent 0deg,
+    transparent 20deg,
+    rgba(255, 120, 80, 0.10) 40deg,
+    rgba(255, 210, 90, 0.22) 55deg,
+    rgba(160, 255, 140, 0.18) 70deg,
+    rgba(80, 210, 255, 0.20) 85deg,
+    rgba(180, 140, 255, 0.12) 100deg,
+    transparent 115deg,
+    transparent 360deg
+  );
+  filter: blur(4px);
+  animation: sweep-arc 6s linear infinite;
+  mix-blend-mode: screen;
+}
+
+/* Secondary faint caustic for volumetric depth */
+#orb-caustic-2 {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 150deg,
+    transparent 0deg,
+    transparent 35deg,
+    rgba(255, 180, 100, 0.05) 55deg,
+    rgba(100, 220, 200, 0.07) 75deg,
+    rgba(140, 160, 255, 0.05) 95deg,
+    transparent 110deg,
+    transparent 360deg
+  );
+  filter: blur(7px);
+  animation: sweep-arc 9s linear infinite reverse;
+  mix-blend-mode: screen;
+}
+
+/* Layer 4: sharp glossy surface reflection — crisp white highlight */
+#orb-reflection {
+  position: absolute;
+  top: 10px; left: 13px;
+  width: 16px; height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 40% 40%,
+    rgba(255,255,255,0.55) 0%,
+    rgba(255,255,255,0.15) 45%,
+    transparent 70%);
+  filter: blur(1.5px);
+  pointer-events: none;
+  animation: reflection-shift 8s var(--ease) infinite;
+}
+@keyframes reflection-shift {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(1px, 0.5px) scale(1.05); opacity: 0.75; }
+}
+
+/* Layer 5: soft secondary reflection highlight */
+#orb-shimmer {
+  position: absolute;
+  top: 18px; left: 22px;
+  width: 8px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.20) 0%, transparent 70%);
+  filter: blur(2px);
+  pointer-events: none;
+  animation: shimmer-drift 7s var(--ease) infinite;
+}
+@keyframes shimmer-drift {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  50% { transform: translate(1.5px, 1px); opacity: 0.3; }
+}
+
+/* Compact state animations */
+#orb-compact.listening #orb-core {
+  box-shadow:
+    0 0 28px rgba(120, 120, 140, 0.12),
+    0 0 56px rgba(160, 140, 255, 0.06),
+    inset 0 0 18px rgba(10, 10, 14, 0.5);
+  animation: listen-breathe 1.6s var(--ease) infinite;
+}
+@keyframes listen-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+#orb-compact.listening #orb-bloom {
+  filter: blur(24px);
+  animation: sweep-arc 3s linear infinite;
+}
+#orb-compact.listening #orb-rim {
+  animation: rim-shift 2s var(--ease) infinite;
+}
+#orb-compact.thinking #orb-caustic {
+  animation: sweep-arc 1.8s linear infinite;
+}
+#orb-compact.thinking #orb-caustic-2 {
+  animation: sweep-arc 3s linear infinite reverse;
+}
+#orb-compact.responding #orb-core {
+  box-shadow:
+    0 0 36px rgba(160, 140, 255, 0.10),
+    0 0 72px rgba(100, 200, 255, 0.06),
+    0 0 110px rgba(140, 255, 200, 0.04),
+    inset 0 0 18px rgba(10, 10, 14, 0.45);
+}
+#orb-compact:hover #orb-stage { transform: scale(1.05); }
+
+/* ═══════════════════════════════════════════════════════════════
+   FULLSCREEN MODE — Siri-style conversation
+   ═══════════════════════════════════════════════════════════════ */
+
+#jarvis-fullscreen {
+  display: none; flex-direction: column;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--bg-mid) 0%, var(--bg) 40%, var(--bg-deep) 100%);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+#jarvis-fullscreen.active { display: flex; }
+#jarvis-fullscreen.visible { opacity: 1; }
+
+/* Large spectral glow behind conversation */
+#jarvis-fullscreen::before {
+  content: '';
+  position: absolute;
+  top: 45%; left: 50%;
+  width: 700px; height: 700px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 100, 100, 0.02) 60deg,
+    rgba(255, 200, 80, 0.03) 100deg,
+    rgba(80, 220, 255, 0.03) 140deg,
+    rgba(160, 120, 255, 0.02) 180deg,
+    transparent 240deg,
+    transparent 360deg
+  );
+  filter: blur(60px);
+  pointer-events: none;
+  animation: sweep-arc 20s linear infinite;
+}
+
+/* Close button */
+#fs-close {
+  position: absolute;
+  top: 16px; right: 20px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  transition: all 0.2s var(--ease);
+}
+#fs-close:hover { color: var(--text-secondary); background: var(--bg-elevated-2); }
+
+/* ── Conversation feed ───────────────────────────────────────── */
+#fs-conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 56px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.msg-user {
+  align-self: center;
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-mid) 100%);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 14px 24px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.45;
+  max-width: 85%;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  animation: msg-in 0.4s var(--ease-out) both;
+}
+
+.msg-jarvis {
+  align-self: flex-start;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 92%;
+  padding: 4px 8px;
+  animation: msg-in 0.4s var(--ease-out) both;
+}
+
+.typing-indicator {
+  align-self: flex-start;
+  padding: 8px 4px;
+}
+.typing-dots { display: flex; gap: 5px; }
+.typing-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: typing-bounce 1.2s var(--ease) infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-8px); opacity: 1; }
+}
+
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Bottom input pill ───────────────────────────────────────── */
+#fs-input-pill {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-mid) 100%);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 5px 5px 5px 10px;
+  margin: 0 auto 32px;
+  max-width: 640px;
+  width: calc(100% - 40px);
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+#fs-input-pill:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(160, 120, 255, 0.06);
+}
+
+.fs-pill-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s var(--ease);
+}
+.fs-pill-icon:hover { background: var(--bg-surface); color: var(--text-secondary); }
+.fs-pill-icon:active { transform: scale(0.92); }
+
+#fs-mode-icon.voice-active {
+  color: rgba(180, 140, 255, 0.8);
+  background: rgba(160, 120, 255, 0.10);
+}
+#fs-mode-icon.voice-active:hover {
+  background: rgba(160, 120, 255, 0.15);
+}
+
+#fs-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px 6px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 400;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+#fs-input::placeholder { color: var(--text-tertiary); }
+#fs-input:disabled { opacity: 0.35; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
